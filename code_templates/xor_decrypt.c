@@ -1,7 +1,7 @@
 //
 // XOR Decryption Function
 //
-void xor_decrypt( unsigned char *data, int data_len)
+void xor_decrypt( unsigned char *data, int data_len )
 {
     unsigned char key = 0x00;
 

@@ -5,6 +5,7 @@ import glob
 import time
 import pefile
 import random
+import base64
 
 
 def main():
@@ -418,6 +419,26 @@ def extract_shellcode( encryption_type ):
             formatted_c_array = f'unsigned char payload[] = {{ {c_array} }};'
             file.write( formatted_c_array + "\n" )
 
+    elif encryption_type == "b64":
+        print( "[+] Encoding the shellcode via base64!" )
+        encoded_text_bytes = base64.b64encode(text_bytes)
+        encoded_text_string = encoded_text_bytes.decode('utf-8')
+
+        with open( "shellcode.text", "w" ) as file, open( "code_templates/b64_decode.c", "r" ) as src_file:
+            for line in src_file:
+                if "#include" in line:
+                    replacement_line = "// " + line
+                    file.write( replacement_line )
+                elif "#pragma" in line:
+                    replacement_line = "// " + line
+                    file.write( replacement_line )
+                else:
+                    file.write( line )
+            
+            file.write( "\n\n" )
+            
+            file.write( "const char *payload = \"" + encoded_text_string + "\";\n" )
+    
     else:
         with open( "shellcode.text", "w" ) as file:
             c_array = ', '.join( f'0x{byte:02x}' for byte in text_bytes )
