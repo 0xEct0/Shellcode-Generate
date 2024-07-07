@@ -120,6 +120,7 @@ def cmd( command, encryption_type ):
 # 
 # HANDLES USER COMMAND INPUT AND GENERATES THE 
 # SHELLCODE TO EXECUTE THE COMMAND IN POWERSHELL
+#
 def ps( command, encryption_type ):
     print( f"[+] Generating shellcode to execute: {command} in powershell" )
     
@@ -233,6 +234,7 @@ def rev_shell( in_address, in_port, encryption_type ):
 #
 # COMPILES THE GENERATED 
 # C FILE TO ASSEMBLY
+#
 def compile_asm():
     #
     # COMPILE THE FILE
@@ -252,6 +254,7 @@ def compile_asm():
 #
 # COMPILES THE FIXED ASSEMBLY 
 # TO AN EXECUTABLE FOR EXTRACTION
+#
 def compile_exe():
     #
     # COMPILE ASSEMBLY TO EXECUTABLE
